@@ -14,6 +14,10 @@ app.use("/api/readings", readingsRoutes);
 app.use("/api/thresholds", thresholdsRoutes);
 
 const port = process.env.PORT || 5002;
-app.listen(port, '0.0.0.0', () => {
+app.listen(port, "0.0.0.0", (err) => {
+  if (err) {
+    console.error(`Server error on port ${port}:`, err.message);
+    return;
+  }
   console.log(`Backend server running on port ${port}`);
 });
