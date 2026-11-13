@@ -25,10 +25,10 @@ import { tokens } from "../theme/tokens.js";
 
 const { color } = tokens;
 
-const DOT_COUNT = 240;
-const HOLE_RADIUS = 78;
-const BASE_SPEED = 0.15;
-const TILT = 0.35;
+const DOT_COUNT = 280;
+const HOLE_RADIUS = 76;
+const BASE_SPEED = 0.22;
+const TILT = 0.42;
 const TEX = 32;
 
 // Fibonacci sphere: deterministic, maximally uniform dot globe.
@@ -69,7 +69,7 @@ function projectAll(angle, swell, R, cx, cy) {
     const hx = sx - cx;
     const hy = sy - cy;
     const hidden = hx * hx + hy * hy < HOLE_RADIUS * HOLE_RADIUS;
-    const sc = 0.22 * (0.65 + 0.75 * depth) * swell;
+    const sc = 0.24 * (0.5 + 0.9 * depth) * swell;
     out[i] = hidden
       ? [0, 0, -10000, -10000]
       : [sc, 0, sx - (TEX / 2) * sc, sy - (TEX / 2) * sc];
@@ -99,10 +99,18 @@ export function TempOrb({
     try {
       const recorder = Skia.PictureRecorder();
       const canvas = recorder.beginRecording(rect(0, 0, TEX, TEX));
-      const paint = Skia.Paint();
-      paint.setAntiAlias(true);
-      paint.setColor(Skia.Color("white"));
-      canvas.drawCircle(TEX / 2, TEX / 2, TEX / 2 - 1, paint);
+      // Outer glow / halo ring
+      const haloPaint = Skia.Paint();
+      haloPaint.setAntiAlias(true);
+      haloPaint.setColor(Skia.Color("rgba(255, 255, 255, 0.45)"));
+      canvas.drawCircle(TEX / 2, TEX / 2, TEX / 2 - 1, haloPaint);
+
+      // Core particle with solid contrast
+      const corePaint = Skia.Paint();
+      corePaint.setAntiAlias(true);
+      corePaint.setColor(Skia.Color("white"));
+      canvas.drawCircle(TEX / 2, TEX / 2, (TEX / 2) * 0.52, corePaint);
+
       return recorder.finishRecordingAsPicture();
     } catch {
       return null;
@@ -140,7 +148,7 @@ export function TempOrb({
       val.set(0, 0, -10000, -10000);
       return;
     }
-    const sc = 0.22 * (0.65 + 0.75 * depth) * swell;
+    const sc = 0.24 * (0.5 + 0.9 * depth) * swell;
     val.set(sc, 0, sx - (TEX / 2) * sc, sy - (TEX / 2) * sc);
   });
 

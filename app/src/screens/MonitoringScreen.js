@@ -7,6 +7,8 @@ import {
 	View,
 	StyleSheet,
 } from "react-native";
+
+const PAGE_SIZE = 10;
 import { useFocusEffect } from "@react-navigation/native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Animated, {
@@ -107,6 +109,7 @@ export function MonitoringScreen() {
 	const [loading, setLoading] = useState(false);
 	const [refreshing, setRefreshing] = useState(false);
 	const [apiError, setApiError] = useState(null);
+	const [page, setPage] = useState(0);
 	const reduceMotion = useReducedMotion();
 
 	const fetchReadings = useCallback(async () => {
@@ -118,6 +121,7 @@ export function MonitoringScreen() {
 				Api.getThresholds().catch(() => null),
 			]);
 			setReadings(history ?? []);
+			setPage(0);
 			const latest = Array.isArray(thresholds) ? thresholds[0]?.value : null;
 			setLatestThreshold(typeof latest === "number" ? latest : null);
 		} catch (err) {
@@ -163,6 +167,13 @@ export function MonitoringScreen() {
 		}
 		return { tone, statusWord, statusColor };
 	}, [temperature, latestThreshold]);
+
+	// Pagination
+	const totalPages = Math.max(1, Math.ceil(readings.length / PAGE_SIZE));
+	const pagedReadings = useMemo(
+		() => readings.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+		[readings, page],
+	);
 
 	const freshness = useMemo(() => {
 		if (!Array.isArray(readings) || readings.length === 0) {
@@ -402,14 +413,77 @@ export function MonitoringScreen() {
 								typeof value === "number" ? Number(value).toFixed(2) : "--",
 						},
 					]}
-					data={readings}
-					keyExtractor={(item) => item.id}
-					loading={loading && !refreshing}
-					emptyTitle="No readings yet"
-					emptyMessage="Triggered readings appear here. Pull to refresh."
-					emptyActionLabel="Refresh"
-					onEmptyAction={fetchReadings}
-				/>
+				data={pagedReadings}
+				keyExtractor={(item) => item.id}
+				loading={loading && !refreshing}
+				emptyTitle="No readings yet"
+				emptyMessage="Triggered readings appear here. Pull to refresh."
+				emptyActionLabel="Refresh"
+				onEmptyAction={fetchReadings}
+			/>
+
+			{/* Pagination Controls */}
+			{!loading && readings.length > PAGE_SIZE && (
+				<View style={styles.pagination}>
+					<Pressable
+						style={({ pressed }) => [
+							styles.pageBtn,
+							page === 0 && styles.pageBtnDisabled,
+							pressed && page > 0 && styles.pressed,
+						]}
+						onPress={() => setPage((p) => Math.max(0, p - 1))}
+						disabled={page === 0}
+						accessibilityLabel="Halaman sebelumnya"
+						accessibilityRole="button"
+					>
+						<Ionicons
+							name="chevron-back"
+							size={16}
+							color={page === 0 ? color.text3 : color.primary}
+						/>
+						<Text
+							style={[
+								styles.pageBtnText,
+								page === 0 && styles.pageBtnTextDisabled,
+							]}
+						>
+							Sebelumnya
+						</Text>
+					</Pressable>
+
+					<View style={styles.pageIndicator}>
+						<Text style={styles.pageIndicatorText}>
+							{page + 1} / {totalPages}
+						</Text>
+					</View>
+
+					<Pressable
+						style={({ pressed }) => [
+							styles.pageBtn,
+							page >= totalPages - 1 && styles.pageBtnDisabled,
+							pressed && page < totalPages - 1 && styles.pressed,
+						]}
+						onPress={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+						disabled={page >= totalPages - 1}
+						accessibilityLabel="Halaman berikutnya"
+						accessibilityRole="button"
+					>
+						<Text
+							style={[
+								styles.pageBtnText,
+								page >= totalPages - 1 && styles.pageBtnTextDisabled,
+							]}
+						>
+							Berikutnya
+						</Text>
+						<Ionicons
+							name="chevron-forward"
+							size={16}
+							color={page >= totalPages - 1 ? color.text3 : color.primary}
+						/>
+					</Pressable>
+				</View>
+			)}
 			</ScrollView>
 		</View>
 	);
@@ -592,5 +666,51 @@ const styles = StyleSheet.create({
 	pressed: {
 		opacity: 0.9,
 		transform: [{ scale: 0.98 }],
+	},
+	pagination: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		paddingVertical: space.md,
+		paddingHorizontal: space.sm,
+		marginTop: space.sm,
+	},
+	pageBtn: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 4,
+		paddingVertical: 8,
+		paddingHorizontal: space.md,
+		borderRadius: radius.chip,
+		borderCurve: "continuous",
+		borderWidth: 1,
+		borderColor: color.primary,
+		backgroundColor: color.surface,
+	},
+	pageBtnDisabled: {
+		borderColor: color.border,
+		backgroundColor: color.surface2,
+	},
+	pageBtnText: {
+		fontSize: 13,
+		fontWeight: "600",
+		color: color.primary,
+	},
+	pageBtnTextDisabled: {
+		color: color.text3,
+	},
+	pageIndicator: {
+		paddingVertical: 6,
+		paddingHorizontal: 10,
+		borderRadius: radius.chip,
+		backgroundColor: color.surface2,
+		borderWidth: 1,
+		borderColor: color.border,
+	},
+	pageIndicatorText: {
+		fontSize: 13,
+		fontWeight: "600",
+		color: color.text2,
+		fontVariant: ["tabular-nums"],
 	},
 });
